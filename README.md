@@ -38,15 +38,18 @@
   - version 2.5.1
 - QualiMap
    - version 2.2.1
-- Samtools<sup>5</sup>
+- Samtools
   - version 1.17
   - https://www.htslib.org/
-- openmpi
-  - version 5.0.3
-- RSEM<sup>6</sup>
-  - version 1.3.3
-  - https://www.encodeproject.org/documents/0c78ea4b-9392-421b-a6f3-6c858b6002aa/@@download/attachment/RSEM_Documentation.pdf
- 
+- python
+  - version 3.11.4
+- java
+  - version 21
+- PICARD
+  - version 2.27.5
+- MACS2
+  - version 2.2.7.1
+    
 ## 1. Sequencing quality check
 FASTQC (version 0.11.5) was used to determine the quality of sequencing and to check for presence of adapters. I run the script using the following command: `sbatch --array=0-119 01_fastqc_array.slurm`. The script takes each fastq file as an input and outputs html documents with information about the quality of reads.
 
@@ -150,22 +153,10 @@ echo "duration:$((end-start)) seconds."
 ```
 
 ## 4. Checking the quality of the read alignmnet
+I checked the quality of read alignment using QualiMap using bamqc argument. I run the "04_qualimap_array.slurm" using the following command: `sbatch --array=0-59 04_qualimap_array.slurm`.
 
-04_qualimap_array.slurm
 The following is part of the "04_qualimap_array.slurm" file:
 ```bash
-# Get list of all data files
-SAM_FILES=($(ls -1 $DATA_PATH/*_bowtie2.sam))
-GTF_FILE=$PROJECT_PATH/Hg38_gencode_v46_gtf/gencode.v46.primary_assembly.annotation.gtf
-
-# Use Slurm Array number to select file for this job
-SAM_FILE=${SAM_FILES[$SLURM_ARRAY_TASK_ID]}
-SAMPLE_ID=($(basename ${SAM_FILE%%_bowtie2.sam}))
-
-# Create output directory for each sample
-OUTPUT_PATH=$PROJECT_PATH/Qualimap_results_filtered_reads_only/$SAMPLE_ID
-mkdir -p $OUTPUT_PATH
-
 echo "Processing file $SAM_FILE"
 echo "Sample ID: $SAMPLE_ID"
 start=$SECONDS
@@ -190,22 +181,14 @@ echo "duration:$((end-start)) seconds."
 ```
 
 ## 5. Filtering reads
-
-05_filtering_reads.slurm
+Before peak calling, I performed filtering using "05_filtering_reads.slurm" script, which performs the following:  
+(1) Remove mitochondrial reads and sorting by coordinate using samtools. The mitochondrial reads are excluded using `grep -v chrM`.  
+(2) The PCR and optical duplicates are flaged using PICARD.   
+(3) Samtools is used to filter out reads the have flags matching the following: duplicates, low quality reads (q 30), reads unmapped, mate unmapped, not primary alignment, reads failing platform.  
+(4) The final filtered bam file is indexed using samtools. The indexed file ending in `.bai` is necessary for viewing the bam file in IGV.   
 
 The following is part of the "05_filtering_reads.slurm" file:
 ```bash
-# Get list of all sam data files
-FILES=($(ls -1 $DATA_PATH/sam/*_bowtie2.sam))
-
-# Use Slurm Array number to select file for this job
-FILE=${FILES[$SLURM_ARRAY_TASK_ID]}
-SAMPLE_ID=($(basename ${FILE%%_bowtie2.sam}))
-
-echo "Processing file $FILE"
-echo "Sample ID: $SAMPLE_ID"
-start=$SECONDS
-
 module purge
 module load gcc samtools java picard
 
