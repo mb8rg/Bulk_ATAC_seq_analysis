@@ -79,14 +79,6 @@ Trim Galore (https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/) is
 
 The following is part of the "02_adapter_trimming_array.slurm" file:
 ```bash
-# Get list of all data files
-FILES_FOR=($(ls -1 $DATA_PATH/*_R1_001.fastq.gz))
-FILES_REV=($(ls -1 $DATA_PATH/*_R2_001.fastq.gz))
-
-# Use Slurm Array number to select file for this job
-FILE_FOR=${FILES_FOR[$SLURM_ARRAY_TASK_ID]}
-FILE_REV=${FILES_REV[$SLURM_ARRAY_TASK_ID]}
-
 echo "Processing file $FILE_FOR and $FILE_REV"
 start=$SECONDS
 module purge
@@ -132,19 +124,10 @@ end=$SECONDS
 echo "duration:$((end-start)) seconds."
 ```
 ## 3b. Read alignment 
-Each pair of trimmed reads is aligned to the hg38 reference genome index using Bowtie2. 
+Each pair of trimmed reads is aligned to the hg38 reference genome index using Bowtie2 aligner. I run the "03b_bowtie_alignment_array.slurm" using the following command: `sbatch --array=0-59 03b_bowtie_alignment_array.slurm`. The script uses very-sensitive mode and end-to-end read alignment, which searches for alignment using the full reads. The `--no-mixed` option means that the aligner will only look for paired-end alignments for each pair of reads. `-X 2000` argument tells the aligner to looks for reads up to 2000 bp long. I set the upper limit very high because I want to obtain the fragment length distribution in step 6 in order to determine is the samples have both nucleosome-free and mono-nucleosome peaks. 
 
 The following is part of the "03b_bowtie_alignment_array.slurm" file:
 ```bash
-# Get list of all data files
-FILES_FOR=($(ls -1 $DATA_PATH/*_R1_001_val_1.fq.gz))
-FILES_REV=($(ls -1 $DATA_PATH/*_R2_001_val_2.fq.gz))
-
-# Use Slurm Array number to select file for this job
-FILE_FOR=${FILES_FOR[$SLURM_ARRAY_TASK_ID]}
-FILE_REV=${FILES_REV[$SLURM_ARRAY_TASK_ID]}
-SAMPLE_ID=($(basename ${FILE_FOR%%_L001_R*}))
-
 echo "Processing file $FILE_FOR and $FILE_REV"
 echo "Sample ID: $SAMPLE_ID"
 start=$SECONDS
@@ -153,7 +136,9 @@ module load bowtie2/2.5.1
 
 # Align reads to human hg38 reference genome index
 bowtie2 \
- -p 8 --end-to-end --very-sensitive \
+ -p 8 \
+ --end-to-end \ # end-to-end read alignment
+ --very-sensitive \
  --no-mixed --phred33 -X 2000 \ 
  -x $HG38_GENOME_INDEX_PATH/hg38_gencode_v46_genomeindex \
  -1 $FILE_FOR -2 $FILE_REV \
