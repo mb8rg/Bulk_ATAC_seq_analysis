@@ -50,6 +50,7 @@
 ## 1. Sequencing quality check
 FASTQC (version 0.11.5) was used to determine the quality of sequencing and to check for presence of adapters. I run the script using the following command: `sbatch --array=0-119 01_fastqc_array.slurm`. The script takes each fastq file as an input and outputs html documents with information about the quality of reads.
 
+The following is part of the "01_fastqc_array.slurm" file:
 ```bash
 # Create directory and set variables
 PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq/
@@ -69,7 +70,6 @@ module load fastqc/0.11.5
 
 fastqc $FILE --outdir $OUTDIR
 ```
-
 The quality scores across bases are good and there is some adapter content matching Nextera Transposase Sequence towards the ends of the reads.
 
 ## 2. Trimming of adapters and low quality reads
@@ -77,15 +77,8 @@ Adapter trimming was performed using Trim Galore (version 0.6.4).  I run "02_ada
 
 Trim Galore (https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/) is a wrapper script that utilizes Cutadapt to trim reads and FastQC to check the quality of reads after trimming. The following is part of the "02_adapter_trimming_array.slurm" with explainations for some of the arugements used. 
 
+The following is part of the "02_adapter_trimming_array.slurm" file:
 ```bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-DATA_PATH=$PROJECT_PATH/Original_FASTQ_files_from_NextSeq_Run_1
-OUTDIR=$PROJECT_PATH/Trimmed_reads
-FASTQC_OUTDIR=$PROJECT_PATH/FASTQC_aftertrim_output
-mkdir -p $OUTDIR
-mkdir -p $FASTQC_OUTDIR
-
 # Get list of all data files
 FILES_FOR=($(ls -1 $DATA_PATH/*_R1_001.fastq.gz))
 FILES_REV=($(ls -1 $DATA_PATH/*_R2_001.fastq.gz))
@@ -122,12 +115,9 @@ I used Human CRCh38 primary assembly genome fasta and annotation from gencode re
 Both files were decompressed using `gunzip`.  
 
 To generate the genome index for alignmnet, I run "03a_bowtie_build_ref_genome_index.slurm" with the following command: `sbatch 03a_bowtie_build_ref_genome_index.slurm`. The indexing of the genome is only done once and the same index will be used for all of the samples.
-```bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-HG38_GENOME_INDEX_PATH=$PROJECT_PATH/Hg38_gencode_v46_genomeindex
-mkdir -p $HG38_GENOME_INDEX_PATH
 
+The following is part of the "03a_bowtie_build_ref_genome_index.slurm" file:
+```bash
 start=$SECONDS
 module purge
 module load gcc
@@ -142,16 +132,10 @@ end=$SECONDS
 echo "duration:$((end-start)) seconds."
 ```
 ## 3b. Read alignment 
-03b_bowtie_alignment_array.slurm
+Each pair of trimmed reads is aligned to the hg38 reference genome index using Bowtie2. 
 
+The following is part of the "03b_bowtie_alignment_array.slurm" file:
 ```bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-DATA_PATH=$PROJECT_PATH/Trimmed_reads
-HG38_GENOME_INDEX_PATH=$PROJECT_PATH/Hg38_gencode_v46_genomeindex
-OUTPUT_PATH=$PROJECT_PATH/Alignment/sam
-mkdir -p $OUTPUT_PATH/bowtie2_summary
-
 # Get list of all data files
 FILES_FOR=($(ls -1 $DATA_PATH/*_R1_001_val_1.fq.gz))
 FILES_REV=($(ls -1 $DATA_PATH/*_R2_001_val_2.fq.gz))
@@ -183,13 +167,8 @@ echo "duration:$((end-start)) seconds."
 ## 4. Checking the quality of the read alignmnet
 
 04_qualimap_array.slurm
+The following is part of the "04_qualimap_array.slurm" file:
 ```bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-DATA_PATH=$PROJECT_PATH/Alignment/sam
-BAM_FILE_DATA_PATH=$PROJECT_PATH/Alignment/bam
-mkdir -p $BAM_FILE_DATA_PATH
-
 # Get list of all data files
 SAM_FILES=($(ls -1 $DATA_PATH/*_bowtie2.sam))
 GTF_FILE=$PROJECT_PATH/Hg38_gencode_v46_gtf/gencode.v46.primary_assembly.annotation.gtf
@@ -224,17 +203,13 @@ qualimap bamqc -nt 4 \
 end=$SECONDS
 echo "duration:$((end-start)) seconds."
 ```
-## 5. 
-05_filtering_reads.slurm
-```bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-DATA_PATH=$PROJECT_PATH/Alignment/
-TEMP_PATH=$DATA_PATH/Temp_path
-mkdir -p $DATA_PATH/Picard_metrics
-mkdir -p $DATA_PATH/bam
-mkdir -p $TEMP_PATH
 
+## 5. Filtering reads
+
+05_filtering_reads.slurm
+
+The following is part of the "05_filtering_reads.slurm" file:
+```bash
 # Get list of all sam data files
 FILES=($(ls -1 $DATA_PATH/sam/*_bowtie2.sam))
 
@@ -247,10 +222,7 @@ echo "Sample ID: $SAMPLE_ID"
 start=$SECONDS
 
 module purge
-module load gcc
-module load samtools
-module load java
-module load picard
+module load gcc samtools java picard
 
 # Remove mitochondrial reads and sort by coordinate
 samtools view -@ 8 -h $FILE | grep -v chrM | samtools sort -@ 8 -o $DATA_PATH/bam/$SAMPLE_ID.rmChrM.bam
@@ -278,16 +250,11 @@ end=$SECONDS
 echo "duration:$((end-start)) seconds."
 ```
 
-## 6. Fragment length
+## 6. Fragment length 
 06_fragment_length.slurm
 
+The following is part of the "06_fragment_length.slurm" file:
 ```bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-DATA_PATH=$PROJECT_PATH/Alignment_maxins1000/sam
-OUTPUT_PATH=$DATA_PATH/Fragment_length
-mkdir -p $OUTPUT_PATH
-
 # Get list of all sam data files
 FILES=($(ls -1 $DATA_PATH/*_bowtie2.sam))
 
@@ -315,10 +282,11 @@ echo "duration:$((end-start)) seconds."
 
 
 
-
-
 ## 7. Peak calling
 07_peak_calling.slurm
+
+
+The following is part of the "05_filtering_reads.slurm" file:
 ``` bash
 # Create directory and set variables
 PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
@@ -354,6 +322,9 @@ echo "duration:$((end-start)) seconds."
 ```
 
 ## 8. Extracting metrics
+
+
+The following is part of the "08_extract_metrics.slurm" file:
 ```bash
 # Create directory and set variables
 PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
