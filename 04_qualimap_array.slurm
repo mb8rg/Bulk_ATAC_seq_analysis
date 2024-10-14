@@ -34,10 +34,10 @@ module load gcc/13.3.0 samtools/1.17 qualimap/2.2.1
 
 # Generate a BAM file sorted by location
 samtools sort -@ 4 $SAM_FILE -o $BAM_FILE_DATA_PATH/$SAMPLE_ID.sorted.bam
-samtools view -@ 4 -q 30 -f 2 -o $BAM_FILE_DATA_PATH/$SAMPLE_ID.qfiltered.sorted.bam $BAM_FILE_DATA_PATH/$SAMPLE_ID.sorted.bam
+
 # Run qualimap on each file in the array
 qualimap bamqc -nt 4 \
- -bam $BAM_FILE_DATA_PATH/$SAMPLE_ID.qfiltered.sorted.bam \
+ -bam $BAM_FILE_DATA_PATH/$SAMPLE_ID.sorted.bam \
  --feature-file $GTF_FILE \
  --paint-chromosome-limits \
  --genome-gc-distr HUMAN \
