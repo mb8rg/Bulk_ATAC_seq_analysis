@@ -226,7 +226,7 @@ echo "duration:$((end-start)) seconds."
 ```
 ## 5. 
 05_filtering_reads.slurm
-
+```bash
 # Create directory and set variables
 PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
 DATA_PATH=$PROJECT_PATH/Alignment/
@@ -237,7 +237,7 @@ mkdir -p $TEMP_PATH
 
 # Get list of all sam data files
 FILES=($(ls -1 $DATA_PATH/sam/*_bowtie2.sam))
-```bash
+
 # Use Slurm Array number to select file for this job
 FILE=${FILES[$SLURM_ARRAY_TASK_ID]}
 SAMPLE_ID=($(basename ${FILE%%_bowtie2.sam}))
