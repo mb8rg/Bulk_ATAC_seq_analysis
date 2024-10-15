@@ -184,7 +184,7 @@ echo "duration:$((end-start)) seconds."
 Before peak calling, I performed filtering using "05_filtering_reads.slurm" script, which performs the following:  
 (1) Remove mitochondrial reads and sorting by coordinate using samtools. The mitochondrial reads are excluded using `grep -v chrM`.  
 (2) The PCR and optical duplicates are flaged using PICARD.   
-(3) Samtools is used to filter out reads the have flags matching the following: duplicates, low quality reads (q 30), reads unmapped, mate unmapped, not primary alignment, reads failing platform.  
+(3) Samtools is used to filter out reads that have flags matching the following: duplicates, low quality reads (q 30), reads unmapped, mate unmapped, not primary alignment, reads failing platform.  
 (4) The final filtered bam file is indexed using samtools. The indexed file ending in `.bai` is necessary for viewing the bam file in IGV.   
 
 The following is part of the "05_filtering_reads.slurm" file:
@@ -218,10 +218,37 @@ end=$SECONDS
 echo "duration:$((end-start)) seconds."
 ```
 
-## 6. Fragment length 
-06_fragment_length.slurm
+## 6. Peak calling
+Peak calling was performed on the filtered bam files from step 5 using MACS2 callpeak function with the `--format BAMPE` argument, which tells MACS2 to pileup the real fragment length instead of an estimate. The `-g hs` indicates that human genome should be used for the effective genome size. `-B` argument indicates to save the  save  extended  fragment pileup, and local lambda tracks at every bp into a bedGraph file and `-SPMR` tells MACS2 to normalize these pileip files to signal per million  reads. 
 
-The following is part of the "06_fragment_length.slurm" file:
+
+The following is part of the "06_peak_calling.slurm" file:
+``` bash
+# Create directory and set variables
+echo "Processing file $FILE"
+echo "Sample ID: $SAMPLE_ID"
+start=$SECONDS
+
+module purge
+module load gcc python macs2
+
+# Peak calling with MACS2
+# --format BAMPE: MACS2 will pileup the real fragment length instead of an estimate
+macs2 callpeak -t $FILE \
+ --format BAMPE \
+ -n ${SAMPLE_ID} \
+ --outdir $OUTPUT_PATH/${SAMPLE_ID} \
+-g hs -B --SPMR --call-summits --keep-dup all
+
+
+end=$SECONDS
+echo "duration:$((end-start)) seconds."
+```
+
+## 7. Fragment length 
+I used the "07_fragment_length.slurm" file to extract fragment lengths using samtools view function. To plot the fragment length distribution, I imported the txt files to R and made fragment length vs read count line plots using ggplot2. This step is optional. Technically the QualiMap files have a fragment length distribution plot at the end of each html file. I used this script to compile all of the fragment length distribution plots into one figure. 
+
+The following is part of the "07_fragment_length.slurm" file:
 ```bash
 # Get list of all sam data files
 FILES=($(ls -1 $DATA_PATH/*_bowtie2.sam))
@@ -248,66 +275,18 @@ end=$SECONDS
 echo "duration:$((end-start)) seconds."
 ```
 
-
-
-## 7. Peak calling
-07_peak_calling.slurm
-
-
-The following is part of the "05_filtering_reads.slurm" file:
-``` bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-DATA_PATH=$PROJECT_PATH/Alignment/
-OUTPUT_PATH=$PROJECT_PATH/MACS2_peak_calling
-mkdir -p $OUTPUT_PATH
-
-# Get list of all sam data files
-FILES=($(ls -1 $DATA_PATH/bam/*.filtered.bam))
-
-# Use Slurm Array number to select file for this job
-FILE=${FILES[$SLURM_ARRAY_TASK_ID]}
-SAMPLE_ID=($(basename ${FILE%%.filtered.bam}))
-
-echo "Processing file $FILE"
-echo "Sample ID: $SAMPLE_ID"
-start=$SECONDS
-
-module purge
-module load gcc python macs2
-
-# Peak calling with MACS2
-# --format BAMPE: MACS2 will pileup the real fragment length instead of an estimate
-macs2 callpeak -t $FILE \
- --format BAMPE \
- -n ${SAMPLE_ID} \
- --outdir $OUTPUT_PATH/${SAMPLE_ID} \
--g hs -B --SPMR --call-summits --keep-dup all
-
-
-end=$SECONDS
-echo "duration:$((end-start)) seconds."
-```
-
 ## 8. Extracting metrics
-
+I used the "08_extract_metrics.slurm" script to extract the following metrics:  
+(1) Total number of reads  
+(2) Number of reads that map to mitochondrial DNA   
+(3) Number of duplicates   
+(4) Total number of reads after filtering for: duplicates, reads with q less than 30, reads unmapped, mate unmapped, not primary alignment, read fails platform/vendor quality check  
+(5) Total number of peaks called   
+(6) FRiP score   
 
 The following is part of the "08_extract_metrics.slurm" file:
 ```bash
-# Create directory and set variables
-PROJECT_PATH=/scratch/mb8rg/20240814_AP1_perturbations_Bulk_ATACseq
-DATA_PATH=$PROJECT_PATH/Alignment/
-PEAKS_PATH=$PROJECT_PATH/MACS2_peak_calling
-
-# Get list of all sam data files
-FILES=($(ls -1 $DATA_PATH/sam/*_bowtie2.sam))
-
-# Use Slurm Array number to select file for this job
-FILE=${FILES[$SLURM_ARRAY_TASK_ID]}
-SAMPLE_ID=($(basename ${FILE%%_bowtie2.sam}))
-
 echo "Sample_ID $SAMPLE_ID"
-
 module purge
 module load samtools bedtools
 
