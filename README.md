@@ -49,6 +49,8 @@
   - version 2.27.5
 - MACS2
   - version 2.2.7.1
+- Bedtools
+  - version 2.30.0
     
 ## 1. Sequencing quality check
 FASTQC (version 0.11.5) was used to determine the quality of sequencing and to check for presence of adapters. I run the script using the following command: `sbatch --array=0-119 01_fastqc_array.slurm`. The script takes each fastq file as an input and outputs html documents with information about the quality of reads.
@@ -327,42 +329,6 @@ echo "FRiP $FRiP"
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Bowtie2 (version 2.5.1) was used for alignement. The reference genome index was build using GRCh38 primary assembly genome fasta and annotation from gencode release version 46. The following arguments were used for read alignment:  --end-to-end --very-sensitive --no-mixed --phred33 -X 1000. I set the X argument to 1000, because I am interested in plotting fragment length distribution for each sample and if there are a lot of long reads I want to capture them.
-
-The sam files were sorted by coordinate using Samtools (version 1.17) sort function. 
-
-The percentage of reads that are PCR duplicates was determined using Picard (version 2.27.5).
-
-To extract the fragment lengths for each sample, I used Samtools view function: "samtools view -@ 4 -F 0x04 $FILE | awk -F'\t' 'function abs(x){return ((x<0.0) ? -x : x)} {print abs($9)}' | sort | uniq -c | awk -v OFS="\t" '{print $2, $1/2}' > $OUTPUT_PATH/${SAMPLE_ID}_fragmentLen.txt". To plot the fragment length distribution, I imported the txt files to R and made fragment length vs read count line plots using ggplot2.
-
-To calculate the % of mitochondrial reads I used ATACseqQC R package. 
-
-The heat maps over transcription start site were plotted using deep tools. First, I generated normalized BigWig files for each sample using the following arguments: bamCoverage -b $FILE -p 4 --normalizeUsing CPM --ignoreForNormalization chrM -o $OUTPUT_PATH/$SAMPLE_ID.bw. Next, I created a matrix file using the following function: computeMatrix scale-regions -S $OUTPUT_PATH/$SAMPLE_ID.bw -R $PROJECT_PATH/Hg38_gencode_v46_gtf/gencode.v46.primary_assembly.annotation.gtf 
- --beforeRegionStartLength 3000 --regionBodyLength 5000 --afterRegionStartLength 3000 --skipZeros -o $SAMPLE_ID.matrix_gene.mat.gz -p 4. The heat map was plotted using the following function: plotHeatmap -m ${SAMPLE_ID}.matrix_gene.mat.gz -out ${SAMPLE_ID}.eps --sortUsing sum.
 
 
 
