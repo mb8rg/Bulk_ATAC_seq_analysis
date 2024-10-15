@@ -22,6 +22,13 @@
 19. COLO858 Cas9 FOS KO-B8S / JUNB shRNA #1
 20. COLO858 Cas9 JUN KO-A4 / JUND shRNA #1
 
+## Library preparation protocol
+
+
+
+
+
+
 # Bulk ATAC-seq analysis
 ## Required Software
 - FastQC
