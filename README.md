@@ -1,4 +1,6 @@
 # Bulk ATAC-seq analysis
+Written by Magda Bujnowska
+
 ## Required Software
 - FastQC
   - verson 0.11.5
