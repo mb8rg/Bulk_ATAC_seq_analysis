@@ -84,10 +84,9 @@ The FASTQC files indicated that the trimming successfully removed adapters.
 Bowtie2 (version 2.5.1) was used for alignement. The reference genome index was build using GRCh38 primary assembly genome fasta and annotation gtf files from gencode release version 46. The alignment requires two steps: (1) generation of genome indexes and (2) read alignment.
 
 ### 3a. Generating Genome Indexes
-I used Human CRCh38 primary assembly genome fasta and annotation from gencode release version 46. I made folders named "hg38_gencode_v46_fasta" and "hg38_gencode_v46_gtf" and downloaded the FASTA and GTF files using the following commands:  
+I used Human CRCh38 primary assembly genome fasta from gencode release version 46. I made folder named "hg38_gencode_v46_fasta" and downloaded the FASTA file using the following commands:  
 `wget http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_46/GRCh38.primary_assembly.genome.fa.gz`  
-`wget http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_46/gencode.v46.primary_assembly.annotation.gtf.gz`  
-Both files were decompressed using `gunzip`.  
+I decompressed the file using `gunzip`.  
 
 To generate the genome index for alignmnet, I run "03a_bowtie_build_ref_genome_index.slurm" with the following command: `sbatch 03a_bowtie_build_ref_genome_index.slurm`. The indexing of the genome is only done once and the same index will be used for all of the samples.
 
