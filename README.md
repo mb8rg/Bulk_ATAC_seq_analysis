@@ -186,10 +186,10 @@ java -jar $EBROOTPICARD/picard.jar MarkDuplicates \
  --METRICS_FILE $DATA_PATH/Picard_metrics/${SAMPLE_ID}_picard.rmDup.txt
 echo "Finished marking duplicates"
 
-# Remove duplicates, low quality reads (q 30), reads unmapped,
+# Remove duplicates, low quality reads (q 10), reads unmapped,
 # mate unmapped, not primary alignment, reads failing platform and
 # duplicates
-samtools view -h -b -F 1804 -f 2 $DATA_PATH/bam/${SAMPLE_ID}.dup_marked.bam > $DATA_PATH/bam/${SAMPLE_ID}.filtered.bam
+samtools view -q 10 -h -b -F 1804 -f 2 $DATA_PATH/bam/${SAMPLE_ID}.dup_marked.bam > $DATA_PATH/bam/${SAMPLE_ID}.filtered.bam
 samtools index -@ 8 $DATA_PATH/bam/${SAMPLE_ID}.filtered.bam
 echo "Finished filtering low quality reads and duplicates"
 
